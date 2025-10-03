@@ -472,7 +472,7 @@ function process(val) {
       const biUpper = val.toUpperCase();
       if (!validateBI(biUpper)) {
         addBot(
-          "BI inválido. Use o formato correto:<br><small>9 dígitos + 2 letras + 3 dígitos<br>Exemplo: 123456789LA001</small>"
+          "BI inválido. Use o formato correto:<br><small>Exemplo: 123456789LA001</small>"
         );
         return;
       }
