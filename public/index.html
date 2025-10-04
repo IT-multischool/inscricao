@@ -372,8 +372,8 @@
       /* Main App - Form View */
       .app {
         display: none;
-        min-height: 100vh;
-        padding-bottom: 80px;
+        height: 100vh;
+        overflow: hidden;
       }
 
       .app.mobile {
@@ -485,7 +485,7 @@
         overflow-y: auto;
         overflow-x: hidden;
         padding: 30px;
-        padding-bottom: 400px;
+        padding-bottom: 100px;
         background: linear-gradient(
           135deg,
           rgba(0, 0, 0, 0.3) 0%,
@@ -495,6 +495,7 @@
         overscroll-behavior: contain;
         min-height: 0;
       }
+
       .msg {
         margin-bottom: 25px;
         animation: fadeIn 0.3s ease;
@@ -654,6 +655,8 @@
         font-family: inherit;
         font-size: 16px;
         outline: none;
+        max-height: 120px;
+        overflow-y: auto;
       }
 
       textarea:focus {
@@ -872,7 +875,7 @@
       @media (max-width: 768px) {
         .welcome-box {
           flex-direction: column;
-          height: 90vh;
+          max-height: 90vh;
           overflow-y: auto;
         }
 
@@ -916,15 +919,21 @@
 
         .header {
           padding: 15px 20px;
+          flex-shrink: 0;
         }
 
         .chat {
           padding: 20px;
+          padding-bottom: 20px;
+          flex: 1;
+          min-height: 0;
+          overflow-y: auto;
         }
 
         .input-area {
           left: 0;
           padding: 15px 20px;
+          bottom: 60px;
         }
 
         .bottom-nav {
@@ -932,7 +941,9 @@
         }
 
         .app {
-          padding-bottom: 70px;
+          height: 100vh;
+          overflow: hidden;
+          padding-bottom: 0;
         }
 
         .dashboard {
