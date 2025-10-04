@@ -1,9 +1,16 @@
 // ==================== CONFIGURAÇÕES ====================
-const WEBHOOK_URL = "http://192.168.1.2:5678/webhook/inscricao"; // SUBSTITUIR
+// Config Supabase
+const supabaseUrl = "https://qpiqntxpaqslfuylnydc.supabase.co"; // Cola o teu Project URL
+const supabaseAnonKey =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFwaXFudHhwYXFzbGZ1eWxueWRjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk0Nzc1NjEsImV4cCI6MjA3NTA1MzU2MX0.beiX0GAfAWuFyXu9uKGbXXXsbcdz8cK64JZXFYgCf4M"; // Cola a anon key
+
+const { createClient } = supabase;
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
 const WEBHOOK_WHATSAPP = "https://seu-webhook.n8n.cloud/webhook/whatsapp-otp"; // SUBSTITUIR (para enviar OTP via WhatsApp/WAHA)
 const WHATSAPP_COMMUNITY = "https://chat.whatsapp.com/GZpPv5O7lmL7UKxVFh1M7K"; // SUBSTITUIR
 const WHATSAPP_SUPPORT = "https://wa.me/244931738075"; // Número de suporte
-const CHATBOT_LINK = "https://seu-chatbot.com"; // Link do chatbot principal
+const CHATBOT_LINK = "https://codestart20.vercel.app/assistente.html"; // Link do chatbot principal
 const PRICE_PER_COURSE = 11000; // Kz por área
 const DISCOUNT_TWO_COURSES = 0.2; // 20% de desconto
 
@@ -60,24 +67,176 @@ const provinces = [
 ];
 
 const municipalities = {
-  "Bengo": ["Ambriz", "Bula Atumba", "Dande", "Dembos-Quibaxe", "Nambuangongo", "Pango Aluquém"],
-  "Benguela": ["Balombo", "Baía Farta", "Benguela", "Bocoio", "Caimbambo", "Catumbela", "Chongorói", "Cubal", "Ganda", "Lobito"],
-  "Bié": ["Andulo", "Camacupa", "Catabola", "Chinguar", "Chitembo", "Cuemba", "Cunhinga", "Cuíto", "N'harea"],
-  "Cabinda": ["Belize", "Buco-Zau", "Cabinda", "Cacongo"],
-  "Cuando-Cubango": ["Calai", "Cuangar", "Cuchi", "Cuito Cuanavale", "Dirico", "Mavinga", "Menongue", "Nancova", "Rivungo"],
-  "Cuanza-Norte": ["Ambaca", "Banga", "Bolongongo", "Cambambe", "Cazengo", "Golungo Alto", "Gonguembo", "Lucala", "Quiculungo", "Samba Cajú"],
-  "Cuanza-Sul": ["Amboim", "Cassongue", "Cela", "Conda", "Ebo", "Libolo", "Mussende", "Quibala", "Quilenda", "Seles", "Sumbe", "Waku Kungo"],
-  "Cunene": ["Cahama", "Cuanhama", "Curoca", "Cuvelai", "Namacunde", "Ombadja"],
-  "Huambo": ["Bailundo", "Caála", "Ekunha", "Huambo", "Katchiungo", "Londuimbale", "Longonjo", "Mungo", "Tchicala-Tcholoanga", "Tchindjenje", "Ucuma"],
-  "Huíla": ["Caconda", "Caluquembe", "Chiange", "Chibia", "Chicomba", "Chipindo", "Gambos", "Humpata", "Jamba", "Kuvango", "Lubango", "Matala", "Quilengues", "Quipungo"],
-  "Luanda": ["Belas", "Cacuaco", "Cazenga", "Icolo e Bengo", "Luanda", "Quilamba Quiaxi", "Quissama", "Talatona", "Viana"],
-  "Lunda-Norte": ["Cambulo", "Capenda-Camulemba", "Caungula", "Chitato", "Cuango", "Cuilo", "Lóvua", "Lubalo", "Lucapa", "Xá-Muteba"],
+  Bengo: [
+    "Ambriz",
+    "Bula Atumba",
+    "Dande",
+    "Dembos-Quibaxe",
+    "Nambuangongo",
+    "Pango Aluquém",
+  ],
+  Benguela: [
+    "Balombo",
+    "Baía Farta",
+    "Benguela",
+    "Bocoio",
+    "Caimbambo",
+    "Catumbela",
+    "Chongorói",
+    "Cubal",
+    "Ganda",
+    "Lobito",
+  ],
+  Bié: [
+    "Andulo",
+    "Camacupa",
+    "Catabola",
+    "Chinguar",
+    "Chitembo",
+    "Cuemba",
+    "Cunhinga",
+    "Cuíto",
+    "N'harea",
+  ],
+  Cabinda: ["Belize", "Buco-Zau", "Cabinda", "Cacongo"],
+  "Cuando-Cubango": [
+    "Calai",
+    "Cuangar",
+    "Cuchi",
+    "Cuito Cuanavale",
+    "Dirico",
+    "Mavinga",
+    "Menongue",
+    "Nancova",
+    "Rivungo",
+  ],
+  "Cuanza-Norte": [
+    "Ambaca",
+    "Banga",
+    "Bolongongo",
+    "Cambambe",
+    "Cazengo",
+    "Golungo Alto",
+    "Gonguembo",
+    "Lucala",
+    "Quiculungo",
+    "Samba Cajú",
+  ],
+  "Cuanza-Sul": [
+    "Amboim",
+    "Cassongue",
+    "Cela",
+    "Conda",
+    "Ebo",
+    "Libolo",
+    "Mussende",
+    "Quibala",
+    "Quilenda",
+    "Seles",
+    "Sumbe",
+    "Waku Kungo",
+  ],
+  Cunene: ["Cahama", "Cuanhama", "Curoca", "Cuvelai", "Namacunde", "Ombadja"],
+  Huambo: [
+    "Bailundo",
+    "Caála",
+    "Ekunha",
+    "Huambo",
+    "Katchiungo",
+    "Londuimbale",
+    "Longonjo",
+    "Mungo",
+    "Tchicala-Tcholoanga",
+    "Tchindjenje",
+    "Ucuma",
+  ],
+  Huíla: [
+    "Caconda",
+    "Caluquembe",
+    "Chiange",
+    "Chibia",
+    "Chicomba",
+    "Chipindo",
+    "Gambos",
+    "Humpata",
+    "Jamba",
+    "Kuvango",
+    "Lubango",
+    "Matala",
+    "Quilengues",
+    "Quipungo",
+  ],
+  Luanda: [
+    "Belas",
+    "Cacuaco",
+    "Cazenga",
+    "Icolo e Bengo",
+    "Luanda",
+    "Quilamba Quiaxi",
+    "Quissama",
+    "Talatona",
+    "Viana",
+  ],
+  "Lunda-Norte": [
+    "Cambulo",
+    "Capenda-Camulemba",
+    "Caungula",
+    "Chitato",
+    "Cuango",
+    "Cuilo",
+    "Lóvua",
+    "Lubalo",
+    "Lucapa",
+    "Xá-Muteba",
+  ],
   "Lunda-Sul": ["Cacolo", "Dala", "Muconda", "Saurimo"],
-  "Malanje": ["Cacuso", "Calandula", "Cambundi-Catembo", "Cangandala", "Caombo", "Cunda-dia-baze", "Kivaba Nzogi", "Luquembo", "Malanje", "Marimba", "Massango", "Mucari", "Quela", "Quirima"],
-  "Moxico": ["Alto Zambeze", "Camanongue", "Cameia", "Leua", "Luau", "Luena", "Luacano", "Lumbala Nguimbo", "Luchazes"],
-  "Namibe": ["Bibala", "Camacuio", "Moçâmedes", "Tômbua", "Virei"],
-  "Uíge": ["Ambuila", "Bembe", "Buengas", "Bungo", "Cangola", "Damba", "Maquela do Zombo", "Mucaba", "Negage", "Puri", "Quimbele", "Quitexe", "Santa Cruz", "Sanza Pombo", "Songo", "Uíge"],
-  "Zaire": ["Cuimba", "M'Banza Kongo", "Noqui", "N'Zeto", "Soyo", "Tomboco"]
+  Malanje: [
+    "Cacuso",
+    "Calandula",
+    "Cambundi-Catembo",
+    "Cangandala",
+    "Caombo",
+    "Cunda-dia-baze",
+    "Kivaba Nzogi",
+    "Luquembo",
+    "Malanje",
+    "Marimba",
+    "Massango",
+    "Mucari",
+    "Quela",
+    "Quirima",
+  ],
+  Moxico: [
+    "Alto Zambeze",
+    "Camanongue",
+    "Cameia",
+    "Leua",
+    "Luau",
+    "Luena",
+    "Luacano",
+    "Lumbala Nguimbo",
+    "Luchazes",
+  ],
+  Namibe: ["Bibala", "Camacuio", "Moçâmedes", "Tômbua", "Virei"],
+  Uíge: [
+    "Ambuila",
+    "Bembe",
+    "Buengas",
+    "Bungo",
+    "Cangola",
+    "Damba",
+    "Maquela do Zombo",
+    "Mucaba",
+    "Negage",
+    "Puri",
+    "Quimbele",
+    "Quitexe",
+    "Santa Cruz",
+    "Sanza Pombo",
+    "Songo",
+    "Uíge",
+  ],
+  Zaire: ["Cuimba", "M'Banza Kongo", "Noqui", "N'Zeto", "Soyo", "Tomboco"],
 };
 
 // ==================== INICIALIZAÇÃO ====================
@@ -804,7 +963,7 @@ function showCourseSelection() {
       name: "Lógica de Programação",
       desc: "Fundamentos e algoritmos",
     },
-    { id: "web", name: "Desenvolvimento Web", desc: "HTML, CSS, JavaScript"},
+    { id: "web", name: "Desenvolvimento Web", desc: "HTML, CSS, JavaScript" },
     {
       id: "design",
       name: "Design Gráfico + Motion",
@@ -951,7 +1110,6 @@ async function sendOTP() {
   }
 }
 
-
 // ==================== SELEÇÃO DE PAGAMENTO ====================
 function selectPaymentType(type) {
   data.paymentType = type;
@@ -1012,7 +1170,10 @@ function selectSchedule(schedule) {
     setTimeout(() => {
       hideTyping();
       const pricing = calculatePrice(data.courses.length);
-      const amount = data.paymentType === "total" ? pricing.final : Math.ceil(pricing.final / 2);
+      const amount =
+        data.paymentType === "total"
+          ? pricing.final
+          : Math.ceil(pricing.final / 2);
       addBot(`Horário selecionado: <strong>${schedule}</strong> ✅<br><br>
                 <strong>Resumo da inscrição:</strong><br>
                 • Nome: ${data.name}<br>
@@ -1037,7 +1198,8 @@ async function finalizeRegistration() {
 
   const ref = "CS" + Date.now().toString().slice(-8);
   const pricing = calculatePrice(data.courses.length);
-  const amountNum = data.paymentType === "total" ? pricing.final : Math.ceil(pricing.final / 2);
+  const amountNum =
+    data.paymentType === "total" ? pricing.final : Math.ceil(pricing.final / 2);
   const amount = formatKz(amountNum);
 
   data.paymentRef = ref;
@@ -1051,15 +1213,20 @@ async function finalizeRegistration() {
   // Salvar no localStorage
   localStorage.setItem("codestart_registration", JSON.stringify(data));
 
-  // Enviar para webhook n8n (Google Sheets)
+// Envia direto para Supabase (em vez do fetch n8n)
   try {
-    await fetch(WEBHOOK_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    });
+    const { data: inserted, error } = await supabase
+      .from('inscricoes') // Nome da tabela
+      .insert([data]); // Insere o objeto data como nova linha
+
+    if (error) throw error;
+
+    console.log('Inscrição salva!', inserted);
+    // Mostra mensagem de sucesso
+    addBot('🎉 Inscrição salva na BD com sucesso! Referência: ' + ref);
   } catch (error) {
-    console.error("Erro ao enviar para webhook:", error);
+    console.error('Erro ao salvar:', error);
+    addBot('😔 Erro ao salvar – tenta novamente.');
   }
 
   hideTyping();
@@ -1115,7 +1282,9 @@ function updateDashboard() {
         <p style="margin: 8px 0;"><strong>Cursos:</strong> ${data.courses.join(
           ", "
         )}</p>
-        <p style="margin: 8px 0;"><strong>Horário:</strong> ${data.schedule || "Não selecionado"}</p>
+        <p style="margin: 8px 0;"><strong>Horário:</strong> ${
+          data.schedule || "Não selecionado"
+        }</p>
         <p style="margin: 8px 0;"><strong>Referência:</strong> <code style="background: #222; padding: 4px 8px; border-radius: 4px;">${
           data.paymentRef
         }</code></p>
@@ -1462,7 +1631,10 @@ function logout() {
 }
 
 function contactSupport() {
-  window.open(`${WHATSAPP_SUPPORT}?text=Olá! Gostaria de solicitar ajuda em relação ao Code Start 2.0.`, "_blank");
+  window.open(
+    `${WHATSAPP_SUPPORT}?text=Olá! Gostaria de solicitar ajuda em relação ao Code Start 2.0.`,
+    "_blank"
+  );
 }
 
 // ==================== VALIDAÇÕES ====================
@@ -1505,10 +1677,10 @@ function addBot(text, opts = []) {
   div.className = "msg bot-msg";
 
   let html = `
-        <div class="avatar"><i class="fas fa-robot"></i></div>
-        <div class="msg-content">
-            <div class="msg-text">${text}</div>
-    `;
+          <div class="avatar"><i class="fas fa-robot"></i></div>
+          <div class="msg-content">
+              <div class="msg-text">${text}</div>
+      `;
 
   if (opts.length > 0) {
     html += '<div class="options">';
@@ -1551,7 +1723,9 @@ function hideTyping() {
 
 function showInput() {
   document.getElementById("inputArea").style.display = "block";
-  document.getElementById("input").focus();
+  const input = document.getElementById("input");
+  input.focus();
+  scrollChat();
 }
 
 function hideInput() {
