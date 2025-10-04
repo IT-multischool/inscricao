@@ -4,8 +4,7 @@ const supabaseUrl = "https://qpiqntxpaqslfuylnydc.supabase.co"; // Cola o teu Pr
 const supabaseAnonKey =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFwaXFudHhwYXFzbGZ1eWxueWRjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk0Nzc1NjEsImV4cCI6MjA3NTA1MzU2MX0.beiX0GAfAWuFyXu9uKGbXXXsbcdz8cK64JZXFYgCf4M"; // Cola a anon key
 
-const { createClient } = supabase;
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+let supabase; // Inicializa mais tarde
 
 const WEBHOOK_WHATSAPP = "https://seu-webhook.n8n.cloud/webhook/whatsapp-otp"; // SUBSTITUIR (para enviar OTP via WhatsApp/WAHA)
 const WHATSAPP_COMMUNITY = "https://chat.whatsapp.com/GZpPv5O7lmL7UKxVFh1M7K"; // SUBSTITUIR
@@ -305,13 +304,18 @@ async function searchRegistration() {
     }
   }
 
-  // Se não encontrar, tentar buscar no webhook (Google Sheets via n8n)
+  // Se não encontrar, tenta buscar na BD Supabase
   try {
-    const response = await fetch(`${WEBHOOK_URL}/search?bi=${bi}`);
-    const result = await response.json();
+    const { data: regData, error } = await supabase
+      .from("inscricoes")
+      .select("*")
+      .eq("bi", bi)
+      .single();
 
-    if (result.found) {
-      data = result.data;
+    if (error && error.code !== "PGRST116") throw error; // PGRST116 = no rows
+
+    if (regData) {
+      data = regData;
       localStorage.setItem("codestart_registration", JSON.stringify(data));
       document.getElementById("searchView").style.display = "none";
       showDashboard();
@@ -319,7 +323,8 @@ async function searchRegistration() {
       alert("Inscrição não encontrada.");
     }
   } catch (error) {
-    alert("Erro ao buscar inscrição. Tente novamente.");
+    console.error("Erro ao buscar na BD:", error);
+    alert("Erro ao buscar inscrição. Tenta novamente.");
   }
 }
 
@@ -1085,7 +1090,7 @@ async function sendOTP() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         phone_number: phoneNumber,
-        message_body: `Code Start 2.0\n\nSeu código de verificação: ${data.otp}\n\nNão compartilhe este código.`,
+        message_body: `Olá, ${data.name}.\n\nO seu código de verificação: ${data.otp}\n\nNão compartilhe este código.`,
       }),
     });
 
@@ -1213,20 +1218,43 @@ async function finalizeRegistration() {
   // Salvar no localStorage
   localStorage.setItem("codestart_registration", JSON.stringify(data));
 
-// Envia direto para Supabase (em vez do fetch n8n)
+  // Mapear para snake_case para o Supabase
+  const dbData = {
+    name: data.name,
+    bi: data.bi,
+    age: data.age,
+    province: data.province,
+    municipality: data.municipality,
+    neighborhood: data.neighborhood,
+    education: data.education,
+    phone1: data.phone1,
+    phone2: data.phone2,
+    email: data.email,
+    motivation: data.motivation,
+    reference: data.reference,
+    courses: data.courses,
+    otp: data.otp,
+    payment_type: data.paymentType,
+    total_amount: data.totalAmount,
+    payment_amount: data.paymentAmount,
+    schedule: data.schedule,
+    payment_ref: data.paymentRef,
+    registration_date: data.registrationDate,
+    expiry_date: data.expiryDate,
+    status: data.status,
+    attempts: data.attempts,
+    ip: data.ip,
+  };
+
+  // Envia para Supabase
   try {
-    const { data: inserted, error } = await supabase
-      .from('inscricoes') // Nome da tabela
-      .insert([data]); // Insere o objeto data como nova linha
+    const { error } = await supabase.from("inscricoes").insert(dbData);
 
     if (error) throw error;
-
-    console.log('Inscrição salva!', inserted);
-    // Mostra mensagem de sucesso
-    addBot('🎉 Inscrição salva na BD com sucesso! Referência: ' + ref);
+    console.log("Inscrição salva com sucesso!");
   } catch (error) {
-    console.error('Erro ao salvar:', error);
-    addBot('😔 Erro ao salvar – tenta novamente.');
+    console.error("Erro ao salvar:", error);
+    alert("Erro ao salvar na base de dados. Os dados foram salvos localmente.");
   }
 
   hideTyping();
@@ -1737,13 +1765,39 @@ function scrollChat() {
   setTimeout(() => (chat.scrollTop = chat.scrollHeight), 100);
 }
 
-// Auto-resize textarea
-document.addEventListener("DOMContentLoaded", () => {
+// Auto-resize textarea e Inicializa Supabase
+document.addEventListener("DOMContentLoaded", async () => {
   const inp = document.getElementById("input");
   if (inp) {
     inp.addEventListener("input", function () {
       this.style.height = "auto";
       this.style.height = Math.min(this.scrollHeight, 120) + "px";
     });
+  }
+
+  // Carrega Supabase dinamicamente
+  try {
+    if (!window.supabase) {
+      // Carrega o script do Supabase
+      const script = document.createElement("script");
+      script.src =
+        "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.min.js";
+
+      await new Promise((resolve, reject) => {
+        script.onload = resolve;
+        script.onerror = reject;
+        document.head.appendChild(script);
+      });
+    }
+
+    // Inicializa o cliente Supabase
+    const { createClient } = window.supabase;
+    supabase = createClient(supabaseUrl, supabaseAnonKey);
+    // console.log("Supabase carregado com sucesso!");
+  } catch (error) {
+    // console.error("Erro ao carregar Supabase:", error);
+    alert(
+      "Erro ao carregar Supabase. Algumas funcionalidades podem não funcionar."
+    );
   }
 });
