@@ -483,7 +483,9 @@
       .chat {
         flex: 1;
         overflow-y: auto;
+        overflow-x: hidden;
         padding: 30px;
+        padding-bottom: 400px;
         background: linear-gradient(
           135deg,
           rgba(0, 0, 0, 0.3) 0%,
@@ -491,8 +493,8 @@
         );
         -webkit-overflow-scrolling: touch;
         overscroll-behavior: contain;
+        min-height: 0;
       }
-
       .msg {
         margin-bottom: 25px;
         animation: fadeIn 0.3s ease;
