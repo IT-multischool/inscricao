@@ -395,6 +395,7 @@
         min-height: 100vh;
         display: flex;
         flex-direction: column;
+        height: 100vh;
       }
 
       .logo {
@@ -485,7 +486,7 @@
         overflow-y: auto;
         overflow-x: hidden;
         padding: 30px;
-        padding-bottom: 100px;
+        padding-bottom: 200px;
         background: linear-gradient(
           135deg,
           rgba(0, 0, 0, 0.3) 0%,
@@ -924,7 +925,7 @@
 
         .chat {
           padding: 20px;
-          padding-bottom: 20px;
+          padding-bottom: 120px;
           flex: 1;
           min-height: 0;
           overflow-y: auto;
@@ -933,7 +934,7 @@
         .input-area {
           left: 0;
           padding: 15px 20px;
-          bottom: 60px;
+          bottom: 0;
         }
 
         /* .bottom-nav {
@@ -1105,7 +1106,7 @@
             <textarea
               id="input"
               rows="1"
-              placeholder="Digite sua resposta..."
+              placeholder="Digite a sua resposta..."
               onkeydown="handleKey(event)"
             ></textarea>
             <button class="send-btn" onclick="send()">

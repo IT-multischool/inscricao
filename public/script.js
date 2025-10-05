@@ -261,7 +261,8 @@ function checkExistingRegistration() {
     data = regData;
     showDashboard();
   } else {
-    document.getElementById("welcomeModal").style.display = "flex";
+    // Em vez de mostrar welcome diretamente, mostrar search para permitir busca no Supabase
+    document.getElementById("searchView").style.display = "flex";
   }
 }
 
@@ -293,34 +294,46 @@ async function searchRegistration() {
   }
 
   // Buscar no localStorage primeiro
+  let localMatch = false;
   const registration = localStorage.getItem("codestart_registration");
   if (registration) {
     const regData = JSON.parse(registration);
     if (regData.bi === bi) {
       data = regData;
+      localMatch = true;
       document.getElementById("searchView").style.display = "none";
       showDashboard();
       return;
     }
   }
 
-  // Se não encontrar, tenta buscar na BD Supabase
+  // Se não encontrou no localStorage ou BI diferente, buscar na BD Supabase
+  if (!supabase) {
+    alert("Sistema ainda carregando. Tente novamente em breve.");
+    return;
+  }
+
   try {
+    // MUDANÇA AQUI: Usa .maybeSingle() para evitar 406 em resultados vazios
     const { data: regData, error } = await supabase
       .from("inscricoes")
       .select("*")
       .eq("bi", bi)
-      .single();
+      .maybeSingle();  // <- Esta é a correção principal
 
-    if (error && error.code !== "PGRST116") throw error; // PGRST116 = no rows
+    if (error) throw error;  // Remove a verificação de PGRST116, pois .maybeSingle() não gera erro em vazio
 
     if (regData) {
+      // Atualizar localStorage com dados do Supabase (sync)
       data = regData;
       localStorage.setItem("codestart_registration", JSON.stringify(data));
       document.getElementById("searchView").style.display = "none";
       showDashboard();
     } else {
-      alert("Inscrição não encontrada.");
+      // Não encontrado em nenhum lugar: iniciar nova inscrição
+      alert("Inscrição não encontrada. Vamos iniciar uma nova.");
+      document.getElementById("searchView").style.display = "none";
+      document.getElementById("welcomeModal").style.display = "flex";
     }
   } catch (error) {
     console.error("Erro ao buscar na BD:", error);
