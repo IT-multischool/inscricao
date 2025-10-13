@@ -238,11 +238,7 @@ const municipalities = {
   Zaire: ["Cuimba", "M'Banza Kongo", "Noqui", "N'Zeto", "Soyo", "Tomboco"],
 };
 
-// ==================== INICIALIZAÇÃO ====================
-window.onload = async function () {
-  await getUserIP();
-  checkExistingRegistration();
-};
+
 
 async function getUserIP() {
   try {
@@ -416,18 +412,18 @@ function showCompanyInfoInChat() {
     setTimeout(() => {
       hideTyping();
       addBot(
-        `<strong>Code Start 2.0, Lda.</strong><br><br>
-                📍 <strong>Localização:</strong><br>
-                Rua Comandante Che Guevara, nº 45<br>
-                Maianga, Luanda - Angola<br><br>
+        `<strong>FORMACTIVA - FORMAÇÃO PROFISSIONAL E TECNOLÓGICA, (SU), Lda.</strong><br><br>
+                📍 <strong>Localização: </strong><br>
+                Benfica, Zona Verde 3 (em frente ao ISIA), rua 3, trav. 3<br>
+                Belas, Luanda - Angola<br><br>
                 📞 <strong>Contactos:</strong><br>
                 Tel: +244 931 738 075<br>
-                Email: info@codestart20.ao<br>
-                Web: www.codestart20.ao<br><br>
-                🆔 <strong>NIF:</strong> 5417258963<br><br>
-                🕐 <strong>Horário:</strong><br>
+                Email: codestart20.nzilax@gmail.com<br>
+                Web: https://codestart20.vercel.app/<br><br>
+                🆔 <strong>NIF:</strong> 5002495457<br><br>
+                🕐 <strong>Horário de atendimento:</strong><br>
                 Seg-Sex: 8h às 17h<br>
-                Sábados: 8h às 13h<br><br>
+                Sábados: 9h às 13h<br><br>
                 Deseja prosseguir com a inscrição?`,
         [
           { text: '<i class="fas fa-check"></i> Sim, prosseguir', fn: agree },
@@ -723,7 +719,7 @@ function process(val) {
         val.toLowerCase().includes("nao")
       ) {
         data.phone2 = null;
-        addBot(`Ok! Tem <strong>email</strong>? (Digite ou "não")`);
+        addBot(`Boa! Tem <strong>email</strong>? (Digite ou "não")`);
         step = 10;
         updateProgress();
       } else if (!validatePhone(val)) {
@@ -746,7 +742,7 @@ function process(val) {
       ) {
         data.email = null;
         addBot(
-          `Sem problema! 👍<br><br>Qual sua <strong>motivação</strong> para fazer este curso?`
+          `Sem problema! 👍<br><br>Qual é a sua <strong>motivação</strong> para fazer este curso?`
         );
         step = 11;
         updateProgress();
@@ -1128,7 +1124,43 @@ async function sendOTP() {
   }
 }
 
+// ==================== ESTRUTURA DE HORÁRIOS POR CURSO ====================
+const courseSchedules = {
+  "Lógica de Programação": [
+    { turma: 5, sala: "Sala 2", horario: "8h - 10h" },
+    { turma: 7, sala: "Sala 2", horario: "13h - 15h" },
+  ],
+  "Desenvolvimento Web": [
+    { turma: 4, sala: "Sala 1", horario: "15h - 17h" },
+    { turma: 6, sala: "Sala 2", horario: "10h - 12h" },
+  ],
+  "Design Gráfico + Motion": [
+    { turma: 3, sala: "Sala 1", horario: "13h - 15h" },
+    { turma: 8, sala: "Sala 2", horario: "15h - 17h" },
+  ],
+  "Cibersegurança em Redes e Sistemas": [
+    { turma: 1, sala: "Sala 1", horario: "9h - 11h" },
+    { turma: 2, sala: "Sala 1", horario: "11h - 13h" },
+  ],
+};
+
+// Mapeamento de nomes de cursos para a chave correta
+const courseNameMapping = {
+  "Lógica de Programação": "Lógica de Programação",
+  "Desenvolvimento Web": "Desenvolvimento Web",
+  "Design Gráfico + Motion Design": "Design Gráfico + Motion",
+  "Cibersegurança em Redes e Sistemas": "Cibersegurança em Redes e Sistemas",
+};
+
+// ==================== FUNÇÃO PARA OBTER HORÁRIOS DE UM CURSO ====================
+function getSchedulesForCourse(courseName) {
+  const key = courseNameMapping[courseName] || courseName;
+  return courseSchedules[key] || [];
+}
+
 // ==================== SELEÇÃO DE PAGAMENTO ====================
+// Substituir a função selectPaymentType existente pela seguinte:
+
 function selectPaymentType(type) {
   data.paymentType = type;
   const pricing = calculatePrice(data.courses.length);
@@ -1144,36 +1176,16 @@ function selectPaymentType(type) {
     showTyping();
     setTimeout(() => {
       hideTyping();
-      // Agora ir para seleção de horários em vez de confirmação direta
-      hideInput();
-      addBot(
-        `Forma de pagamento selecionada: <strong>${
-          type === "total" ? "Total" : "Parcelado"
-        }</strong> ✅<br><br>🕐 Qual horário prefere para as aulas?`,
-        [
-          {
-            text: '<i class="fas fa-clock"></i> Dias úteis 08-10h',
-            fn: () => selectSchedule("Dias úteis 08-10h"),
-          },
-          {
-            text: '<i class="fas fa-clock"></i> Dias úteis 10-12h',
-            fn: () => selectSchedule("Dias úteis 10-12h"),
-          },
-          {
-            text: '<i class="fas fa-clock"></i> Dias úteis 13-15h',
-            fn: () => selectSchedule("Dias úteis 13-15h"),
-          },
-          {
-            text: '<i class="fas fa-clock"></i> Dias úteis 15-17h',
-            fn: () => selectSchedule("Dias úteis 15-17h"),
-          },
-          {
-            text: '<i class="fas fa-clock"></i> Sábados 09-14h',
-            fn: () => selectSchedule("Sábados 09-14h"),
-          },
-        ]
-      );
-      step = 16; // Horários
+
+      // Se apenas 1 curso, ir direto para seleção de horário
+      if (data.courses.length === 1) {
+        showScheduleSelectionForCourse(0);
+      } else {
+        // Se 2 cursos, começar com o primeiro
+        showScheduleSelectionForCourse(0);
+      }
+
+      step = 16;
       updateProgress();
     }, 2000);
   }, 1000);
@@ -1207,6 +1219,104 @@ function selectSchedule(schedule) {
       updateProgress();
     }, 2000);
   }, 1000);
+}
+
+// ==================== NOVA FUNÇÃO: SELEÇÃO DE HORÁRIO POR CURSO ====================
+function showScheduleSelectionForCourse(courseIndex) {
+  const courseName = data.courses[courseIndex];
+  const schedules = getSchedulesForCourse(courseName);
+
+  if (!schedules || schedules.length === 0) {
+    addBot(
+      `⚠️ Nenhum horário disponível para ${courseName}. Entre em contacto com o suporte.`
+    );
+    return;
+  }
+
+  hideInput();
+
+  const scheduleOptions = schedules.map((s) => ({
+    text: `<i class="fas fa-clock"></i> ${s.horario} (Turma ${s.turma} - ${s.sala})`,
+    fn: () => selectCourseSchedule(s, courseIndex),
+  }));
+
+  const courseLabel =
+    data.courses.length > 1 ? `(${courseIndex + 1}/${data.courses.length})` : "";
+
+  addBot(
+    `Forma de pagamento: <strong>${
+      data.paymentType === "total" ? "Total" : "Parcelado"
+    }</strong> ✅<br><br>🕐 Selecione o horário para <strong>${courseName}</strong> ${courseLabel}:`,
+    scheduleOptions
+  );
+}
+
+// ==================== NOVA FUNÇÃO: REGISTAR O HORÁRIO DO CURSO ====================
+function selectCourseSchedule(schedule, courseIndex) {
+  const courseName = data.courses[courseIndex];
+
+  // Inicializar array de horários se não existir
+  if (!data.schedules) {
+    data.schedules = {};
+  }
+
+  // Armazenar horário com informações completas
+  data.schedules[courseName] = {
+    horario: schedule.horario,
+    turma: schedule.turma,
+    sala: schedule.sala,
+  };
+
+  addUser(
+    `${schedule.horario} (Turma ${schedule.turma} - ${schedule.sala})`
+  );
+
+  setTimeout(() => {
+    showTyping();
+    setTimeout(() => {
+      hideTyping();
+
+      // Se há mais cursos, mostrar seleção para o próximo
+      if (courseIndex + 1 < data.courses.length) {
+        showScheduleSelectionForCourse(courseIndex + 1);
+      } else {
+        // Todos os horários foram selecionados, ir para confirmação
+        showFinalConfirmation();
+      }
+    }, 2000);
+  }, 1000);
+}
+
+// ==================== NOVA FUNÇÃO: CONFIRMAÇÃO FINAL ====================
+function showFinalConfirmation() {
+  const pricing = calculatePrice(data.courses.length);
+  const amount =
+    data.paymentType === "total"
+      ? pricing.final
+      : Math.ceil(pricing.final / 2);
+
+  let schedulesText = "";
+  data.courses.forEach((course) => {
+    const schedule = data.schedules[course];
+    if (schedule) {
+      schedulesText += `<br>• ${course}: ${schedule.horario} (${schedule.sala})`;
+    }
+  });
+
+  addBot(
+    `<strong>Resumo da inscrição:</strong><br>
+    • Nome: ${data.name}<br>
+    • BI: ${data.bi}<br>
+    • Telefone: ${data.phone1}<br>
+    • Cursos: ${data.courses.join(", ")}<br>
+    • Horários:${schedulesText}<br>
+    • Valor total: ${formatKz(pricing.final)}<br>
+    • A pagar agora: ${formatKz(amount)}<br><br>
+    Confirma os dados? Digite <strong>SIM</strong> para finalizar ou <strong>NÃO</strong> para revisar.`
+  );
+  showInput();
+  step = 17;
+  updateProgress();
 }
 
 // ==================== FINALIZAR INSCRIÇÃO ====================
@@ -1621,7 +1731,7 @@ function downloadPDF() {
   );
   y += lineHeight;
   doc.text(
-    `Status: ${
+    `Estado do pagamento: ${
       data.status === "pending"
         ? "Pendente"
         : data.status === "completed"
@@ -1636,11 +1746,11 @@ function downloadPDF() {
   y = 270;
   doc.setFontSize(9);
   doc.setTextColor(100, 100, 100);
-  doc.text("Code Start 2.0, Lda. | NIF: 5417258963", 105, y, {
+  doc.text("FORMACTIVA - FORMAÇÃO PROFISSIONAL E TECNOLÓGICA, (SU), Lda. | NIF: 5002495457", 105, y, {
     align: "center",
   });
   y += 5;
-  doc.text("Luanda, Angola | +244 931 738 075 | info@codestart20.ao", 105, y, {
+  doc.text("Luanda, Angola | +244 931 738 075 | codestart20.nzilax@gmail.com", 105, y, {
     align: "center",
   });
 
