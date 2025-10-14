@@ -24,24 +24,25 @@ let conversationEnded = false;
 let alertSent5Hours = false;
 
 const steps = [
-  "Acordo",
-  "Nome",
-  "BI",
-  "Idade",
-  "Província",
-  "Município",
-  "Bairro",
-  "Educação",
-  "Telefone 1",
-  "Telefone 2",
-  "Email",
-  "Motivação",
-  "Referência",
-  "Cursos",
-  "Verificação",
-  "Pagamento",
-  "Horários",
-  "Confirmação",
+  "Acordo", // 0
+  "Nome", // 1
+  "BI", // 2
+  "Idade", // 3
+  "Província", // 4
+  "Município", // 5
+  "Bairro", // 6
+  "Educação", // 7
+  "Telefone 1", // 8
+  "Telefone 2", // 9
+  "Email", // 10
+  "Motivação", // 11
+  "Referência", // 12
+  "Cursos", // 13
+  "Modalidade", // 14
+  "Verificação", // 15
+  "Pagamento", // 16
+  "Horários", // 17
+  "Confirmação", // 18
 ];
 
 const provinces = [
@@ -238,14 +239,14 @@ const municipalities = {
   Zaire: ["Cuimba", "M'Banza Kongo", "Noqui", "N'Zeto", "Soyo", "Tomboco"],
 };
 
-
-
 async function getUserIP() {
   try {
     const response = await fetch("https://api.ipify.org?format=json");
     const data = await response.json();
     userIP = data.ip;
+    console.log("✅ IP obtido:", userIP);
   } catch (error) {
+    console.error("❌ Erro ao obter IP:", error);
     userIP = "unknown";
   }
 }
@@ -315,9 +316,9 @@ async function searchRegistration() {
       .from("inscricoes")
       .select("*")
       .eq("bi", bi)
-      .maybeSingle();  // <- Esta é a correção principal
+      .maybeSingle(); // <- Esta é a correção principal
 
-    if (error) throw error;  // Remove a verificação de PGRST116, pois .maybeSingle() não gera erro em vazio
+    if (error) throw error; // Remove a verificação de PGRST116, pois .maybeSingle() não gera erro em vazio
 
     if (regData) {
       // Atualizar localStorage com dados do Supabase (sync)
@@ -800,6 +801,7 @@ function process(val) {
     case 14: // Verificação OTP
       if (val.length === 6 && /^\d+$/.test(val)) {
         if (val === data.otp) {
+          data.otp = val; // Guardar o OTP verificado
           hideInput();
           const pricing = calculatePrice(data.courses.length);
           const totalAmount = formatKz(pricing.final);
@@ -817,7 +819,7 @@ function process(val) {
               },
             ]
           );
-          step = 15;
+          step = 16; // ← MUDAR PARA 16, não 15!
           updateProgress();
         } else {
           addBot("❌ Código incorreto. Tente novamente:");
@@ -826,7 +828,39 @@ function process(val) {
         addBot("Digite o código de <strong>6 dígitos</strong>:");
       }
       break;
-
+    case 16: // Confirmação - ESTE CASE ESTAVA VAZIO
+      if (
+        val.toLowerCase().includes("sim") ||
+        val.toLowerCase().includes("confirmo")
+      ) {
+        finalizeRegistration();
+      } else if (
+        val.toLowerCase().includes("não") ||
+        val.toLowerCase().includes("nao")
+      ) {
+        hideInput();
+        addBot(
+          `Sem problema! Entre em contacto com nossa equipa para esclarecer dúvidas:<br><br>
+            📞 <strong>+244 931 738 075</strong><br>
+            📧 <strong>codestart20.nzilax@gmail.com</strong><br><br>
+            Ou deseja refazer a inscrição?`,
+          [
+            {
+              text: '<i class="fas fa-redo"></i> Refazer',
+              fn: () => location.reload(),
+            },
+            {
+              text: '<i class="fab fa-whatsapp"></i> Contactar Equipa',
+              fn: contactSupport,
+            },
+          ]
+        );
+      } else {
+        addBot(
+          'Por favor, responda com "<strong>SIM</strong>" para confirmar ou "<strong>NÃO</strong>" para cancelar:'
+        );
+      }
+      break;
     case 17: // Confirmação
       if (
         val.toLowerCase().includes("sim") ||
@@ -841,7 +875,7 @@ function process(val) {
         addBot(
           `Sem problema! Entre em contacto com nossa equipa para esclarecer dúvidas:<br><br>
             📞 <strong>+244 931 738 075</strong><br>
-            📧 <strong>info@codestart20.ao</strong><br><br>
+            📧 <strong>codestart20.nzilax@gmail.com</strong><br><br>
             Ou deseja refazer a inscrição?`,
           [
             {
@@ -1052,6 +1086,40 @@ function confirmCourses() {
     showTyping();
     setTimeout(() => {
       hideTyping();
+      // ← NOVO: Mostrar seleção de modalidade em vez de OTP
+      showModalitySelection();
+      step = 14;
+      updateProgress();
+    }, 2000);
+  }, 1000);
+}
+
+function showModalitySelection() {
+  addBot(
+    `Cursos selecionados: <strong>${data.courses.join(
+      ", "
+    )}</strong> ✅<br><br>📍 Qual vai ser a  <strong>modalidade do curso</strong>?`,
+    [
+      {
+        text: '<i class="fas fa-building"></i> Presencial',
+        fn: () => selectModality("Presencial"),
+      },
+      {
+        text: '<i class="fas fa-laptop"></i> Online',
+        fn: () => selectModality("Online"),
+      },
+    ]
+  );
+}
+
+function selectModality(modality) {
+  data.modality = modality;
+  addUser(modality);
+
+  setTimeout(() => {
+    showTyping();
+    setTimeout(() => {
+      hideTyping();
       const contactOptions = [
         {
           text: `<i class="fas fa-sms"></i> SMS (${data.phone1})`,
@@ -1071,12 +1139,10 @@ function confirmCourses() {
       }
 
       addBot(
-        `Cursos selecionados: <strong>${selected.join(
-          ", "
-        )}</strong> ✅<br><br>🔐 Vou enviar um <strong>código de verificação</strong>.<br><br>Para onde prefere receber?`,
+        `Modalidade: <strong>${modality}</strong> ✅<br><br>🔐 Vou enviar um <strong>código de verificação</strong>.<br><br>Para onde prefere receber?`,
         contactOptions
       );
-      step = 14;
+      step = 15;
       updateProgress();
     }, 2000);
   }, 1000);
@@ -1111,6 +1177,8 @@ async function sendOTP() {
         `✅ SMS enviado para <strong>${data.phone1}</strong>!<br><br>Digite o <strong>código de 6 dígitos</strong> que recebeu:`
       );
       showInput();
+      step = 14; // Atualizar para step de verificação
+      updateProgress();
     } else {
       throw new Error("Falha no envio");
     }
@@ -1126,16 +1194,14 @@ async function sendOTP() {
 
 // ==================== ESTRUTURA DE HORÁRIOS POR CURSO ====================
 const courseSchedules = {
-  "Lógica de Programação": [
-    { turma: 5, sala: "Sala 2", horario: "8h - 10h" },
-    { turma: 7, sala: "Sala 2", horario: "13h - 15h" },
-  ],
+  "Lógica de Programação": [{ turma: 7, sala: "Sala 2", horario: "13h - 15h" }],
   "Desenvolvimento Web": [
     { turma: 4, sala: "Sala 1", horario: "15h - 17h" },
     { turma: 6, sala: "Sala 2", horario: "10h - 12h" },
   ],
   "Design Gráfico + Motion": [
-    { turma: 3, sala: "Sala 1", horario: "13h - 15h" },
+    { turma: 3, sala: "Sala 2", horario: "8h - 10h" },
+    { turma: 5, sala: "Sala 1", horario: "13h - 15h" },
     { turma: 8, sala: "Sala 2", horario: "15h - 17h" },
   ],
   "Cibersegurança em Redes e Sistemas": [
@@ -1241,7 +1307,9 @@ function showScheduleSelectionForCourse(courseIndex) {
   }));
 
   const courseLabel =
-    data.courses.length > 1 ? `(${courseIndex + 1}/${data.courses.length})` : "";
+    data.courses.length > 1
+      ? `(${courseIndex + 1}/${data.courses.length})`
+      : "";
 
   addBot(
     `Forma de pagamento: <strong>${
@@ -1267,9 +1335,7 @@ function selectCourseSchedule(schedule, courseIndex) {
     sala: schedule.sala,
   };
 
-  addUser(
-    `${schedule.horario} (Turma ${schedule.turma} - ${schedule.sala})`
-  );
+  addUser(`${schedule.horario} (Turma ${schedule.turma} - ${schedule.sala})`);
 
   setTimeout(() => {
     showTyping();
@@ -1291,17 +1357,20 @@ function selectCourseSchedule(schedule, courseIndex) {
 function showFinalConfirmation() {
   const pricing = calculatePrice(data.courses.length);
   const amount =
-    data.paymentType === "total"
-      ? pricing.final
-      : Math.ceil(pricing.final / 2);
+    data.paymentType === "total" ? pricing.final : Math.ceil(pricing.final / 2);
 
+  // ✅ CORREÇÃO: Construir texto de horários corretamente
   let schedulesText = "";
-  data.courses.forEach((course) => {
-    const schedule = data.schedules[course];
-    if (schedule) {
-      schedulesText += `<br>• ${course}: ${schedule.horario} (${schedule.sala})`;
-    }
-  });
+  if (data.schedules && Object.keys(data.schedules).length > 0) {
+    data.courses.forEach((course) => {
+      const schedule = data.schedules[course];
+      if (schedule) {
+        schedulesText += `<br>• ${course}: ${schedule.horario} (Turma ${schedule.turma} - ${schedule.sala})`;
+      }
+    });
+  } else {
+    schedulesText = "<br>• Não selecionado";
+  }
 
   addBot(
     `<strong>Resumo da inscrição:</strong><br>
@@ -1309,6 +1378,7 @@ function showFinalConfirmation() {
     • BI: ${data.bi}<br>
     • Telefone: ${data.phone1}<br>
     • Cursos: ${data.courses.join(", ")}<br>
+    • Modalidade: ${data.modality || "Não selecionado"}<br>
     • Horários:${schedulesText}<br>
     • Valor total: ${formatKz(pricing.final)}<br>
     • A pagar agora: ${formatKz(amount)}<br><br>
@@ -1336,12 +1406,13 @@ async function finalizeRegistration() {
   data.expiryDate = new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString();
   data.status = "pending";
   data.attempts = 0;
-  data.ip = userIP;
+  data.ip = userIP || "unknown"; // ← Garantir que sempre tem valor
 
-  // Salvar no localStorage
   localStorage.setItem("codestart_registration", JSON.stringify(data));
 
-  // Mapear para snake_case para o Supabase
+  // ✅ CORREÇÃO: Converter schedules para JSON string para armazenar no Supabase
+  const schedulesJSON = data.schedules ? JSON.stringify(data.schedules) : null;
+
   const dbData = {
     name: data.name,
     bi: data.bi,
@@ -1351,33 +1422,43 @@ async function finalizeRegistration() {
     neighborhood: data.neighborhood,
     education: data.education,
     phone1: data.phone1,
-    phone2: data.phone2,
-    email: data.email,
+    phone2: data.phone2 || null,
+    email: data.email || null,
     motivation: data.motivation,
     reference: data.reference,
-    courses: data.courses,
+    courses: data.courses, // array
+    modality: data.modality || "Não selecionado", // ← Garantir valor
     otp: data.otp,
     payment_type: data.paymentType,
     total_amount: data.totalAmount,
     payment_amount: data.paymentAmount,
-    schedule: data.schedule,
-    payment_ref: data.paymentRef,
+    schedule: schedulesJSON, // ← Agora é string JSON (CORRIGIDO)
+    payment_ref: ref,
     registration_date: data.registrationDate,
     expiry_date: data.expiryDate,
-    status: data.status,
-    attempts: data.attempts,
-    ip: data.ip,
+    status: "pending",
+    attempts: 0,
+    ip: data.ip, // ← Incluir IP (CORRIGIDO)
   };
 
-  // Envia para Supabase
   try {
-    const { error } = await supabase.from("inscricoes").insert(dbData);
+    if (!supabase) {
+      throw new Error("Supabase não inicializado");
+    }
 
-    if (error) throw error;
-    console.log("Inscrição salva com sucesso!");
+    const { data: insertedData, error } = await supabase
+      .from("inscricoes")
+      .insert([dbData]); // ✅ Usar array para insert
+
+    if (error) {
+      console.error("Erro do Supabase:", error);
+      throw error;
+    }
+
+    console.log("✅ Inscrição salva com sucesso no Supabase!", insertedData);
   } catch (error) {
-    console.error("Erro ao salvar:", error);
-    alert("Erro ao salvar na base de dados. Os dados foram salvos localmente.");
+    console.error("❌ Erro ao salvar no Supabase:", error.message);
+    // Não interromper o fluxo - dados já estão no localStorage
   }
 
   hideTyping();
@@ -1421,7 +1502,34 @@ function showDashboard() {
 }
 
 function updateDashboard() {
-  // Informações
+  // ✅ CORREÇÃO: Recuperar schedules do localStorage se necessário
+  if (!data.schedules && localStorage.getItem("codestart_registration")) {
+    const stored = JSON.parse(localStorage.getItem("codestart_registration"));
+    if (stored.schedules) {
+      data.schedules = stored.schedules;
+    }
+  }
+
+  // ✅ CORREÇÃO: Construir texto de horários
+  let scheduleText = "Não selecionado";
+  if (data.schedules && Object.keys(data.schedules).length > 0) {
+    const scheduleArray = [];
+    data.courses.forEach((course) => {
+      const schedule = data.schedules[course];
+      if (schedule) {
+        scheduleArray.push(
+          `${course}: ${schedule.horario} (Turma ${schedule.turma})`
+        );
+      }
+    });
+    if (scheduleArray.length > 0) {
+      scheduleText = scheduleArray.join("<br>");
+    }
+  } else if (data.schedule) {
+    // Fallback para dados antigos
+    scheduleText = data.schedule;
+  }
+
   const info = document.getElementById("dashInfo");
   info.innerHTML = `
         <p style="margin: 8px 0;"><strong>Nome:</strong> ${data.name}</p>
@@ -1433,9 +1541,10 @@ function updateDashboard() {
         <p style="margin: 8px 0;"><strong>Cursos:</strong> ${data.courses.join(
           ", "
         )}</p>
-        <p style="margin: 8px 0;"><strong>Horário:</strong> ${
-          data.schedule || "Não selecionado"
+        <p style="margin: 8px 0;"><strong>Modalidade:</strong> ${
+          data.modality || "Não selecionado"
         }</p>
+        <p style="margin: 8px 0;"><strong>Horário:</strong><br>${scheduleText}</p>
         <p style="margin: 8px 0;"><strong>Referência:</strong> <code style="background: #222; padding: 4px 8px; border-radius: 4px;">${
           data.paymentRef
         }</code></p>
@@ -1637,7 +1746,7 @@ function downloadPDF() {
   const doc = new jsPDF();
   const pricing = calculatePrice(data.courses.length);
 
-  // Design da fatura
+  // Design da fatura - Header com cor verde
   doc.setFillColor(179, 226, 52);
   doc.rect(0, 0, 210, 40, "F");
 
@@ -1657,6 +1766,7 @@ function downloadPDF() {
   let y = 55;
   const lineHeight = 8;
 
+  // SEÇÃO 1: DADOS DO FORMANDO
   doc.setFont("helvetica", "bold");
   doc.text("DADOS DO FORMANDO", 20, y);
   y += lineHeight + 2;
@@ -1666,8 +1776,14 @@ function downloadPDF() {
   y += lineHeight;
   doc.text(`BI: ${data.bi}`, 20, y);
   y += lineHeight;
+  doc.text(`Idade: ${data.age} anos`, 20, y);
+  y += lineHeight;
   doc.text(`Telefone: ${data.phone1}`, 20, y);
   y += lineHeight;
+  if (data.phone2) {
+    doc.text(`Telefone Alternativo: ${data.phone2}`, 20, y);
+    y += lineHeight;
+  }
   doc.text(`Email: ${data.email || "Não informado"}`, 20, y);
   y += lineHeight;
   doc.text(
@@ -1675,7 +1791,10 @@ function downloadPDF() {
     20,
     y
   );
+  y += lineHeight;
+  doc.text(`Nível Académico: ${data.education}`, 20, y);
 
+  // SEÇÃO 2: DADOS DA INSCRIÇÃO
   y += lineHeight + 5;
   doc.setFont("helvetica", "bold");
   doc.text("DADOS DA INSCRIÇÃO", 20, y);
@@ -1686,16 +1805,42 @@ function downloadPDF() {
   y += lineHeight;
   doc.text(`Cursos: ${data.courses.join(", ")}`, 20, y);
   y += lineHeight;
-  doc.text(`Horário: ${data.schedule || "Não selecionado"}`, 20, y);
+  doc.text(`Modalidade: ${data.modality || "Não selecionado"}`, 20, y);
   y += lineHeight;
+
+  // Mostrar horários por curso se existirem
+  if (data.schedules && Object.keys(data.schedules).length > 0) {
+    doc.text("Horários:", 20, y);
+    y += lineHeight;
+    data.courses.forEach((course) => {
+      const schedule = data.schedules[course];
+      if (schedule) {
+        doc.text(
+          `  • ${course}: ${schedule.horario} (${schedule.sala} - Turma ${schedule.turma})`,
+          20,
+          y
+        );
+        y += lineHeight;
+      }
+    });
+  } else {
+    doc.text(`Horário: ${data.schedule || "Não selecionado"}`, 20, y);
+    y += lineHeight;
+  }
+
   doc.text(
-    `Data: ${new Date(data.registrationDate).toLocaleString("pt-PT")}`,
+    `Data de Inscrição: ${new Date(data.registrationDate).toLocaleString(
+      "pt-PT"
+    )}`,
     20,
     y
   );
   y += lineHeight;
-  doc.text(`Nível Académico: ${data.education}`, 20, y);
+  doc.text(`Motivação: ${data.motivation}`, 20, y);
+  y += lineHeight;
+  doc.text(`Como soube do curso: ${data.reference}`, 20, y);
 
+  // SEÇÃO 3: INFORMAÇÕES DE PAGAMENTO
   y += lineHeight + 5;
   doc.setFont("helvetica", "bold");
   doc.text("INFORMAÇÕES DE PAGAMENTO", 20, y);
@@ -1706,55 +1851,143 @@ function downloadPDF() {
   y += lineHeight;
 
   if (pricing.discount > 0) {
+    doc.setTextColor(0, 180, 0);
     doc.text(`Desconto (20%): -${formatKz(pricing.discount)}`, 20, y);
     y += lineHeight;
+    doc.setTextColor(0, 0, 0);
   }
+
   doc.setFont("helvetica", "bold");
-  doc.text(`Valor final: ${formatKz(pricing.final)}`, 20, y);
+  doc.setFontSize(12);
+  doc.text(`Valor Final: ${formatKz(pricing.final)}`, 20, y);
   y += lineHeight;
+
   doc.setFont("helvetica", "normal");
-  doc.text(`Pago agora: ${data.paymentAmount}`, 20, y);
+  doc.setFontSize(11);
+  doc.text(`Valor a Pagar Agora: ${data.paymentAmount}`, 20, y);
   y += lineHeight;
 
   doc.text(
-    `Tipo: ${
-      data.paymentType === "total" ? "Pagamento Total" : "Pagamento Parcelado"
+    `Tipo de Pagamento: ${
+      data.paymentType === "total"
+        ? "Pagamento Total"
+        : "Pagamento Parcelado (2x)"
     }`,
     20,
     y
   );
   y += lineHeight;
+
   doc.text(
-    `Prazo: ${new Date(data.expiryDate).toLocaleString("pt-PT")}`,
+    `Prazo de Pagamento: ${new Date(data.expiryDate).toLocaleString("pt-PT")}`,
     20,
     y
   );
   y += lineHeight;
-  doc.text(
-    `Estado do pagamento: ${
-      data.status === "pending"
-        ? "Pendente"
-        : data.status === "completed"
-        ? "Concluído"
-        : "Anulado"
-    }`,
-    20,
-    y
-  );
 
-  // Rodapé
+  // Status com cor
+  const statusText =
+    data.status === "pending"
+      ? "Pagamento Pendente"
+      : data.status === "completed"
+      ? "Pagamento Concluído"
+      : "Inscrição Anulada";
+
+  const statusColor =
+    data.status === "pending"
+      ? [255, 107, 107]
+      : data.status === "completed"
+      ? [76, 175, 80]
+      : [200, 200, 200];
+
+  doc.setTextColor(...statusColor);
+  doc.text(`Estado: ${statusText}`, 20, y);
+  doc.setTextColor(0, 0, 0);
+
+  // SEÇÃO 4: INFORMAÇÕES ADICIONAIS
+  y += lineHeight + 5;
+  if (data.status === "pending") {
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    doc.setTextColor(255, 107, 107);
+    doc.text("⚠️ ATENÇÃO: Pagamento Pendente", 20, y);
+    y += lineHeight;
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.setTextColor(0, 0, 0);
+    doc.text(
+      "Sua inscrição será automaticamente anulada se o pagamento não for confirmado dentro do prazo.",
+      20,
+      y,
+      { maxWidth: 170 }
+    );
+    y += lineHeight + 10;
+
+    doc.text("Para efetuar o pagamento, entre em contato:", 20, y);
+    y += lineHeight;
+    doc.text("📞 +244 931 738 075", 20, y);
+    y += lineHeight;
+    doc.text("📧 codestart20.nzilax@gmail.com", 20, y);
+    y += lineHeight;
+    doc.text("Referência de Pagamento:", 20, y);
+    y += lineHeight;
+
+    // Box com referência
+    doc.setFillColor(240, 240, 240);
+    doc.rect(20, y - 2, 170, 12, "F");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11);
+    doc.text(data.paymentRef, 105, y + 4, { align: "center" });
+  } else if (data.status === "completed") {
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    doc.setTextColor(76, 175, 80);
+    doc.text("✅ INSCRIÇÃO CONFIRMADA", 20, y);
+    y += lineHeight;
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.setTextColor(0, 0, 0);
+    doc.text(
+      `Seu pagamento foi confirmado! O curso inicia em ${new Date(
+        COURSE_START_DATE
+      ).toLocaleDateString("pt-PT")}.`,
+      20,
+      y,
+      { maxWidth: 170 }
+    );
+    y += lineHeight + 5;
+    doc.text("Acesse a comunidade WhatsApp para atualizações:", 20, y);
+  }
+
+  // RODAPÉ
   y = 270;
   doc.setFontSize(9);
   doc.setTextColor(100, 100, 100);
-  doc.text("FORMACTIVA - FORMAÇÃO PROFISSIONAL E TECNOLÓGICA, (SU), Lda. | NIF: 5002495457", 105, y, {
-    align: "center",
-  });
+  doc.setFont("helvetica", "normal");
+  doc.text(
+    "FORMACTIVA - FORMAÇÃO PROFISSIONAL E TECNOLÓGICA, (SU), Lda. | NIF: 5002495457",
+    105,
+    y,
+    { align: "center" }
+  );
   y += 5;
-  doc.text("Luanda, Angola | +244 931 738 075 | codestart20.nzilax@gmail.com", 105, y, {
-    align: "center",
-  });
+  doc.text(
+    "Benfica, Zona Verde 3 (em frente ao ISIA), rua 3, trav. 3 | Belas, Luanda - Angola",
+    105,
+    y,
+    { align: "center" }
+  );
+  y += 5;
+  doc.text(
+    "Tel: +244 931 738 075 | Email: codestart20.nzilax@gmail.com | Web: https://codestart20.vercel.app/",
+    105,
+    y,
+    { align: "center" }
+  );
 
-  // Salvar
+  // Salvar com nome único
   doc.save(`CodeStart_Fatura_${data.paymentRef}.pdf`);
 }
 
@@ -1890,6 +2123,12 @@ function scrollChat() {
 
 // Auto-resize textarea e Inicializa Supabase
 document.addEventListener("DOMContentLoaded", async () => {
+  // ✅ PASSO 1: Obter o IP ANTES de qualquer coisa
+  console.log("🔄 Iniciando aplicação...");
+  await getUserIP();
+  console.log("✅ IP capturado:", userIP);
+
+  // PASSO 2: Auto-resize textarea
   const inp = document.getElementById("input");
   if (inp) {
     inp.addEventListener("input", function () {
@@ -1898,10 +2137,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
-  // Carrega Supabase dinamicamente
+  // PASSO 3: Carrega Supabase dinamicamente
   try {
     if (!window.supabase) {
-      // Carrega o script do Supabase
+      console.log("📦 Carregando Supabase...");
       const script = document.createElement("script");
       script.src =
         "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.min.js";
@@ -1916,11 +2155,52 @@ document.addEventListener("DOMContentLoaded", async () => {
     // Inicializa o cliente Supabase
     const { createClient } = window.supabase;
     supabase = createClient(supabaseUrl, supabaseAnonKey);
-    // console.log("Supabase carregado com sucesso!");
+    console.log("✅ Supabase carregado com sucesso!");
+
+    // PASSO 4: Verificar se existe inscrição após Supabase estar pronto
+    checkExistingRegistration();
+    console.log("✅ App pronta!");
   } catch (error) {
-    // console.error("Erro ao carregar Supabase:", error);
+    console.error("❌ Erro ao carregar Supabase:", error);
     alert(
       "Erro ao carregar Supabase. Algumas funcionalidades podem não funcionar."
     );
   }
 });
+
+// ==================== ALTERNATIVA: Usar múltiplas APIs de IP ====================
+// Se a primeira falhar, tentar outras
+async function getUserIPWithFallback() {
+  const ipAPIs = [
+    "https://api.ipify.org?format=json",
+    "https://ip-api.com/json/",
+    "https://ipinfo.io/json",
+  ];
+
+  for (const apiUrl of ipAPIs) {
+    try {
+      const response = await fetch(apiUrl);
+      const data = await response.json();
+
+      // Diferentes APIs retornam o IP em campos diferentes
+      const ip =
+        data.ip ||
+        data.query ||
+        data.ip_address ||
+        data.ipAddress;
+
+      if (ip && ip !== "unknown") {
+        userIP = ip;
+        console.log("✅ IP obtido de", apiUrl, ":", userIP);
+        return;
+      }
+    } catch (error) {
+      console.error("Falha em", apiUrl, ":", error.message);
+      continue;
+    }
+  }
+
+  // Se todas as APIs falharem
+  userIP = "unknown";
+  console.warn("⚠️ Não foi possível obter o IP. Usando 'unknown'");
+}
