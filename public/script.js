@@ -1120,6 +1120,43 @@ function selectModality(modality) {
     showTyping();
     setTimeout(() => {
       hideTyping();
+      
+      // ========== VALIDAÇÃO DE DISPONIBILIDADE ==========
+      // Verificar se algum curso selecionado não está disponível na modalidade escolhida
+      const unavailableCourses = [];
+      data.courses.forEach(course => {
+        const schedules = getSchedulesForCourse(course, modality);
+        if (!schedules || schedules.length === 0) {
+          unavailableCourses.push(course);
+        }
+      });
+      
+      // Se houver cursos indisponíveis, informar o usuário
+      if (unavailableCourses.length > 0) {
+        const courseList = unavailableCourses.join(", ");
+        addBot(
+          `⚠️ <strong>Atenção!</strong><br><br>
+          ${unavailableCourses.length === 1 ? 'O curso' : 'Os cursos'} <strong>${courseList}</strong> 
+          ${unavailableCourses.length === 1 ? 'não está disponível' : 'não estão disponíveis'} na modalidade <strong>${modality}</strong>.<br><br>
+          ${unavailableCourses.includes("Cibersegurança em Redes e Sistemas") ? 
+            '<small>📌 <strong>Cibersegurança</strong> só está disponível <strong>presencialmente</strong>.</small><br><br>' : ''}
+          Por favor, escolha outra modalidade:`,
+          [
+            {
+              text: '<i class="fas fa-building"></i> Presencial',
+              fn: () => selectModality("Presencial"),
+            },
+            {
+              text: '<i class="fas fa-laptop"></i> Online',
+              fn: () => selectModality("Online"),
+            },
+          ]
+        );
+        return; // Para a execução aqui
+      }
+      // ========== FIM DA VALIDAÇÃO ==========
+      
+      // Se todos os cursos estão disponíveis, prosseguir com OTP
       const contactOptions = [
         {
           text: `<i class="fas fa-sms"></i> SMS (${data.phone1})`,
@@ -1194,20 +1231,42 @@ async function sendOTP() {
 
 // ==================== ESTRUTURA DE HORÁRIOS POR CURSO ====================
 const courseSchedules = {
-  "Lógica de Programação": [{ turma: 7, sala: "Sala 2", horario: "13h - 15h" }],
-  "Desenvolvimento Web": [
-    { turma: 4, sala: "Sala 1", horario: "15h - 17h" },
-    { turma: 6, sala: "Sala 2", horario: "10h - 12h" },
-  ],
-  "Design Gráfico + Motion": [
-    { turma: 3, sala: "Sala 2", horario: "8h - 10h" },
-    { turma: 5, sala: "Sala 1", horario: "13h - 15h" },
-    { turma: 8, sala: "Sala 2", horario: "15h - 17h" },
-  ],
-  "Cibersegurança em Redes e Sistemas": [
-    { turma: 1, sala: "Sala 1", horario: "9h - 11h" },
-    { turma: 2, sala: "Sala 1", horario: "11h - 13h" },
-  ],
+  "Cibersegurança em Redes e Sistemas": {
+    Presencial: [
+      { turma: 1, sala: "Sala 1", horario: "9h - 11h", dias: "Dias úteis" },
+      { turma: 2, sala: "Sala 1", horario: "11h - 13h", dias: "Dias úteis" },
+    ],
+    Online: [] // Cibersegurança não disponível online
+  },
+  "Design Gráfico + Motion": {
+    Presencial: [
+      { turma: 3, sala: "Sala 2", horario: "8h - 10h", dias: "Dias úteis" },
+      { turma: 5, sala: "Sala 1", horario: "13h - 15h", dias: "Dias úteis" },
+      { turma: 8, sala: "Sala 2", horario: "15h - 17h", dias: "Dias úteis" },
+      { turma: 9, sala: "Sala 3", horario: "9h30 - 14h30", dias: "Sábados" },
+    ],
+    Online: [
+      { turma: 10, sala: "Online", horario: "18h - 20h", dias: "Dias úteis" },
+    ]
+  },
+  "Desenvolvimento Web": {
+    Presencial: [
+      { turma: 4, sala: "Sala 1", horario: "15h - 17h", dias: "Dias úteis" },
+      { turma: 6, sala: "Sala 2", horario: "10h - 12h", dias: "Dias úteis" },
+      { turma: 11, sala: "Sala 3", horario: "9h30 - 14h30", dias: "Sábados" },
+    ],
+    Online: [
+      { turma: 12, sala: "Online", horario: "18h - 20h", dias: "Dias úteis" },
+    ]
+  },
+  "Lógica de Programação": {
+    Presencial: [
+      { turma: 7, sala: "Sala 2", horario: "13h - 15h", dias: "Dias úteis" }
+    ],
+    Online: [
+      { turma: 13, sala: "Online", horario: "18h - 20h", dias: "Dias úteis" },
+    ]
+  },
 };
 
 // Mapeamento de nomes de cursos para a chave correta
@@ -1219,11 +1278,15 @@ const courseNameMapping = {
 };
 
 // ==================== FUNÇÃO PARA OBTER HORÁRIOS DE UM CURSO ====================
-function getSchedulesForCourse(courseName) {
+function getSchedulesForCourse(courseName, modality) {
   const key = courseNameMapping[courseName] || courseName;
-  return courseSchedules[key] || [];
+  const courseData = courseSchedules[key];
+  
+  if (!courseData) return [];
+  
+  // Retornar horários baseados na modalidade
+  return courseData[modality] || [];
 }
-
 // ==================== SELEÇÃO DE PAGAMENTO ====================
 // Substituir a função selectPaymentType existente pela seguinte:
 
@@ -1290,11 +1353,18 @@ function selectSchedule(schedule) {
 // ==================== NOVA FUNÇÃO: SELEÇÃO DE HORÁRIO POR CURSO ====================
 function showScheduleSelectionForCourse(courseIndex) {
   const courseName = data.courses[courseIndex];
-  const schedules = getSchedulesForCourse(courseName);
+  const schedules = getSchedulesForCourse(courseName, data.modality);
 
   if (!schedules || schedules.length === 0) {
     addBot(
-      `⚠️ Nenhum horário disponível para ${courseName}. Entre em contacto com o suporte.`
+      `⚠️ Nenhum horário disponível para <strong>${courseName}</strong> na modalidade <strong>${data.modality}</strong>.<br><br>
+      Entre em contacto com o suporte para mais informações.`,
+      [
+        {
+          text: '<i class="fas fa-headset"></i> Contactar Suporte',
+          fn: contactSupport,
+        },
+      ]
     );
     return;
   }
@@ -1302,7 +1372,7 @@ function showScheduleSelectionForCourse(courseIndex) {
   hideInput();
 
   const scheduleOptions = schedules.map((s) => ({
-    text: `<i class="fas fa-clock"></i> ${s.horario} (Turma ${s.turma} - ${s.sala})`,
+    text: `<i class="fas fa-clock"></i> ${s.horario} ${s.dias !== 'Dias úteis' ? '(' + s.dias + ')' : ''} (Turma ${s.turma}${s.sala !== 'Online' ? ' - ' + s.sala : ''})`,
     fn: () => selectCourseSchedule(s, courseIndex),
   }));
 
@@ -1314,11 +1384,10 @@ function showScheduleSelectionForCourse(courseIndex) {
   addBot(
     `Forma de pagamento: <strong>${
       data.paymentType === "total" ? "Total" : "Parcelado"
-    }</strong> ✅<br><br>🕐 Selecione o horário para <strong>${courseName}</strong> ${courseLabel}:`,
+    }</strong> ✅<br><br>🕐 Selecione o horário para <strong>${courseName}</strong> ${courseLabel}:<br><small>Modalidade: ${data.modality}</small>`,
     scheduleOptions
   );
 }
-
 // ==================== NOVA FUNÇÃO: REGISTAR O HORÁRIO DO CURSO ====================
 function selectCourseSchedule(schedule, courseIndex) {
   const courseName = data.courses[courseIndex];
@@ -1333,9 +1402,11 @@ function selectCourseSchedule(schedule, courseIndex) {
     horario: schedule.horario,
     turma: schedule.turma,
     sala: schedule.sala,
+    dias: schedule.dias  // ← NOVO CAMPO
   };
 
-  addUser(`${schedule.horario} (Turma ${schedule.turma} - ${schedule.sala})`);
+  const displayText = `${schedule.horario} ${schedule.dias !== 'Dias úteis' ? '(' + schedule.dias + ')' : ''} (Turma ${schedule.turma}${schedule.sala !== 'Online' ? ' - ' + schedule.sala : ''})`;
+  addUser(displayText);
 
   setTimeout(() => {
     showTyping();
@@ -1352,7 +1423,6 @@ function selectCourseSchedule(schedule, courseIndex) {
     }, 2000);
   }, 1000);
 }
-
 // ==================== NOVA FUNÇÃO: CONFIRMAÇÃO FINAL ====================
 function showFinalConfirmation() {
   const pricing = calculatePrice(data.courses.length);
@@ -1365,7 +1435,9 @@ function showFinalConfirmation() {
     data.courses.forEach((course) => {
       const schedule = data.schedules[course];
       if (schedule) {
-        schedulesText += `<br>• ${course}: ${schedule.horario} (Turma ${schedule.turma} - ${schedule.sala})`;
+        const daysText = schedule.dias && schedule.dias !== 'Dias úteis' ? ` (${schedule.dias})` : '';
+        const salaText = schedule.sala && schedule.sala !== 'Online' ? ` - ${schedule.sala}` : '';
+        schedulesText += `<br>• ${course}: ${schedule.horario}${daysText} (Turma ${schedule.turma}${salaText})`;
       }
     });
   } else {
@@ -1517,8 +1589,9 @@ function updateDashboard() {
     data.courses.forEach((course) => {
       const schedule = data.schedules[course];
       if (schedule) {
+        const daysText = schedule.dias && schedule.dias !== 'Dias úteis' ? ` (${schedule.dias})` : '';
         scheduleArray.push(
-          `${course}: ${schedule.horario} (Turma ${schedule.turma})`
+          `${course}: ${schedule.horario}${daysText} (Turma ${schedule.turma})`
         );
       }
     });
@@ -1567,50 +1640,49 @@ function updateDashboard() {
   }
 
   statusEl.innerHTML = `
-        <span class="status-badge ${statusClass}">${statusText}</span>
-        <p style="margin-top: 10px; color: #999; font-size: 14px;">${statusDesc}</p>
-    `;
+    <span class="status-badge ${statusClass}">${statusText}</span>
+    <p style="margin-top: 10px; color: #999; font-size: 14px;">${statusDesc}</p>
+  `;
 
+  // ========== ESTA PARTE ESTAVA FALTANDO ==========
   // Ações
   const actions = document.getElementById("dashActions");
   actions.innerHTML = "";
 
   if (data.status === "pending") {
     actions.innerHTML = `
-            <button class="dash-btn btn-primary-dash" onclick="uploadReceipt()">
-                <i class="fas fa-upload"></i> Enviar Comprovativo
-            </button>
-            <button class="dash-btn btn-secondary-dash" onclick="downloadPDF()">
-                <i class="fas fa-download"></i> Baixar Fatura (PDF)
-            </button>
-            <button class="dash-btn btn-secondary-dash" onclick="contactSupport()">
-                <i class="fas fa-headset"></i> Suporte
-            </button>
-        `;
+      <button class="dash-btn btn-primary-dash" onclick="uploadReceipt()">
+        <i class="fas fa-upload"></i> Enviar Comprovativo
+      </button>
+      <button class="dash-btn btn-secondary-dash" onclick="downloadPDF()">
+        <i class="fas fa-download"></i> Baixar Fatura (PDF)
+      </button>
+      <button class="dash-btn btn-secondary-dash" onclick="contactSupport()">
+        <i class="fas fa-headset"></i> Suporte
+      </button>
+    `;
   } else if (data.status === "completed") {
     actions.innerHTML = `
-            <button class="dash-btn btn-primary-dash" onclick="downloadPDF()">
-                <i class="fas fa-download"></i> Baixar Fatura
-            </button>
-            <button class="dash-btn btn-secondary-dash" onclick="joinCommunity()">
-                <i class="fab fa-whatsapp"></i> Comunidade
-            </button>
-        `;
+      <button class="dash-btn btn-primary-dash" onclick="downloadPDF()">
+        <i class="fas fa-download"></i> Baixar Fatura
+      </button>
+      <button class="dash-btn btn-secondary-dash" onclick="joinCommunity()">
+        <i class="fab fa-whatsapp"></i> Comunidade
+      </button>
+    `;
   } else if (data.status === "cancelled" && data.attempts < 3) {
     actions.innerHTML = `
-            <button class="dash-btn btn-primary-dash" onclick="retryRegistration()">
-                <i class="fas fa-redo"></i> Nova Tentativa (${
-                  3 - data.attempts
-                } restantes)
-            </button>
-        `;
+      <button class="dash-btn btn-primary-dash" onclick="retryRegistration()">
+        <i class="fas fa-redo"></i> Nova Tentativa (${3 - data.attempts} restantes)
+      </button>
+    `;
   } else {
     actions.innerHTML = `
-            <p style="color: #999;">Limite de tentativas excedido. Entre em contato com o suporte.</p>
-            <button class="dash-btn btn-secondary-dash" onclick="contactSupport()">
-                <i class="fas fa-headset"></i> Contactar Suporte
-            </button>
-        `;
+      <p style="color: #999;">Limite de tentativas excedido. Entre em contato com o suporte.</p>
+      <button class="dash-btn btn-secondary-dash" onclick="contactSupport()">
+        <i class="fas fa-headset"></i> Contactar Suporte
+      </button>
+    `;
   }
 
   // Botão de sair apenas em mobile
@@ -1621,6 +1693,7 @@ function updateDashboard() {
     logoutBtn.onclick = logout;
     actions.appendChild(logoutBtn);
   }
+  // ========== FIM DA PARTE QUE ESTAVA FALTANDO ==========
 }
 
 function startCountdown() {
@@ -1731,6 +1804,7 @@ async function send5HourAlert() {
   }
 }
 
+
 // ==================== AÇÕES DO DASHBOARD ====================
 function uploadReceipt() {
   // Redirecionar para WhatsApp da Nzila
@@ -1766,7 +1840,7 @@ function downloadPDF() {
   let y = 55;
   const lineHeight = 8;
 
-  // SEÇÃO 1: DADOS DO FORMANDO
+  // ========== SEÇÃO 1: DADOS DO FORMANDO ==========
   doc.setFont("helvetica", "bold");
   doc.text("DADOS DO FORMANDO", 20, y);
   y += lineHeight + 2;
@@ -1794,7 +1868,7 @@ function downloadPDF() {
   y += lineHeight;
   doc.text(`Nível Académico: ${data.education}`, 20, y);
 
-  // SEÇÃO 2: DADOS DA INSCRIÇÃO
+  // ========== SEÇÃO 2: DADOS DA INSCRIÇÃO ==========
   y += lineHeight + 5;
   doc.setFont("helvetica", "bold");
   doc.text("DADOS DA INSCRIÇÃO", 20, y);
@@ -1840,7 +1914,7 @@ function downloadPDF() {
   y += lineHeight;
   doc.text(`Como soube do curso: ${data.reference}`, 20, y);
 
-  // SEÇÃO 3: INFORMAÇÕES DE PAGAMENTO
+ // SEÇÃO 3: INFORMAÇÕES DE PAGAMENTO
   y += lineHeight + 5;
   doc.setFont("helvetica", "bold");
   doc.text("INFORMAÇÕES DE PAGAMENTO", 20, y);
@@ -1860,7 +1934,7 @@ function downloadPDF() {
   doc.setFont("helvetica", "bold");
   doc.setFontSize(12);
   doc.text(`Valor Final: ${formatKz(pricing.final)}`, 20, y);
-  y += lineHeight;
+  y += lineHeight + 2;
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(11);
@@ -1883,15 +1957,15 @@ function downloadPDF() {
     20,
     y
   );
-  y += lineHeight;
+  y += lineHeight + 2;
 
-  // Status com cor
+  // Status com cor e destaque visual
   const statusText =
     data.status === "pending"
-      ? "Pagamento Pendente"
+      ? "⏳ Pagamento Pendente"
       : data.status === "completed"
-      ? "Pagamento Concluído"
-      : "Inscrição Anulada";
+      ? "✅ Pagamento Concluído"
+      : "❌ Inscrição Anulada";
 
   const statusColor =
     data.status === "pending"
@@ -1900,68 +1974,108 @@ function downloadPDF() {
       ? [76, 175, 80]
       : [200, 200, 200];
 
-  doc.setTextColor(...statusColor);
-  doc.text(`Estado: ${statusText}`, 20, y);
-  doc.setTextColor(0, 0, 0);
-
-  // SEÇÃO 4: INFORMAÇÕES ADICIONAIS
+  // Box colorido para o estado
+  doc.setFillColor(...statusColor);
+  doc.roundedRect(20, y - 3, 80, 10, 2, 2, 'F');
+  
+  doc.setTextColor(255, 255, 255);
+  doc.setFont("helvetica", "bold");
+  doc.text(statusText, 60, y + 3, { align: "center" });
+  
   y += lineHeight + 5;
+  doc.setTextColor(0, 0, 0);
+  doc.setFont("helvetica", "normal");
+
+  // ========== SEÇÃO 4: INFORMAÇÕES ADICIONAIS ==========
   if (data.status === "pending") {
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(10);
-    doc.setTextColor(255, 107, 107);
-    doc.text("⚠️ ATENÇÃO: Pagamento Pendente", 20, y);
-    y += lineHeight;
-
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(9);
-    doc.setTextColor(0, 0, 0);
-    doc.text(
-      "Sua inscrição será automaticamente anulada se o pagamento não for confirmado dentro do prazo.",
-      20,
-      y,
-      { maxWidth: 170 }
-    );
-    y += lineHeight + 10;
-
-    doc.text("Para efetuar o pagamento, entre em contato:", 20, y);
-    y += lineHeight;
-    doc.text("📞 +244 931 738 075", 20, y);
-    y += lineHeight;
-    doc.text("📧 codestart20.nzilax@gmail.com", 20, y);
-    y += lineHeight;
-    doc.text("Referência de Pagamento:", 20, y);
-    y += lineHeight;
-
-    // Box com referência
-    doc.setFillColor(240, 240, 240);
-    doc.rect(20, y - 2, 170, 12, "F");
+    // Adicionar espaço antes da caixa de aviso
+    y += 5;
+    
+    // Caixa de aviso com fundo vermelho claro
+    doc.setFillColor(255, 235, 235);
+    doc.roundedRect(15, y - 5, 180, 50, 3, 3, 'F');
+    
+    // Borda vermelha
+    doc.setDrawColor(255, 107, 107);
+    doc.setLineWidth(0.5);
+    doc.roundedRect(15, y - 5, 180, 50, 3, 3, 'S');
+    
     doc.setFont("helvetica", "bold");
     doc.setFontSize(11);
-    doc.text(data.paymentRef, 105, y + 4, { align: "center" });
-  } else if (data.status === "completed") {
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(10);
-    doc.setTextColor(76, 175, 80);
-    doc.text("✅ INSCRIÇÃO CONFIRMADA", 20, y);
-    y += lineHeight;
-
+    doc.setTextColor(200, 0, 0);
+    doc.text("⚠️ ATENÇÃO: Pagamento Pendente", 20, y + 2);
+    
     doc.setFont("helvetica", "normal");
     doc.setFontSize(9);
-    doc.setTextColor(0, 0, 0);
+    doc.setTextColor(100, 0, 0);
+    y += 10;
     doc.text(
-      `Seu pagamento foi confirmado! O curso inicia em ${new Date(
+      "Sua inscrição será automaticamente anulada se o pagamento não for",
+      20,
+      y
+    );
+    y += 5;
+    doc.text("confirmado dentro do prazo.", 20, y);
+    
+    y += 10;
+    doc.setTextColor(0, 0, 0);
+    doc.setFont("helvetica", "bold");
+    doc.text("Para efetuar o pagamento, contacte:", 20, y);
+    y += 6;
+    doc.setFont("helvetica", "normal");
+    doc.text("📞 +244 931 738 075  |  📧 codestart20.nzilax@gmail.com", 20, y);
+    
+    y += 10;
+    doc.setFont("helvetica", "bold");
+    doc.text("Referência de Pagamento:", 20, y);
+    y += 8;
+
+    // Box com referência destacada
+    doc.setFillColor(50, 50, 50);
+    doc.roundedRect(20, y - 4, 160, 12, 2, 2, "F");
+    doc.setTextColor(179, 226, 52);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(14);
+    doc.text(data.paymentRef, 100, y + 3, { align: "center" });
+    
+    y += 20;
+  } else if (data.status === "completed") {
+    y += 5;
+    
+    // Caixa de sucesso com fundo verde claro
+    doc.setFillColor(235, 255, 235);
+    doc.roundedRect(15, y - 5, 180, 35, 3, 3, 'F');
+    
+    // Borda verde
+    doc.setDrawColor(76, 175, 80);
+    doc.setLineWidth(0.5);
+    doc.roundedRect(15, y - 5, 180, 35, 3, 3, 'S');
+    
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11);
+    doc.setTextColor(0, 150, 0);
+    doc.text("✅ INSCRIÇÃO CONFIRMADA", 20, y + 2);
+    
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.setTextColor(0, 100, 0);
+    y += 10;
+    doc.text(
+      `Pagamento confirmado! O curso inicia em ${new Date(
         COURSE_START_DATE
       ).toLocaleDateString("pt-PT")}.`,
       20,
-      y,
-      { maxWidth: 170 }
+      y
     );
-    y += lineHeight + 5;
-    doc.text("Acesse a comunidade WhatsApp para atualizações:", 20, y);
+    y += 8;
+    doc.text("Acesse a comunidade WhatsApp para atualizações.", 20, y);
+    
+    y += 20;
   }
+  
+  doc.setTextColor(0, 0, 0);
 
-  // RODAPÉ
+  // ========== RODAPÉ ==========
   y = 270;
   doc.setFontSize(9);
   doc.setTextColor(100, 100, 100);
