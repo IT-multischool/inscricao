@@ -1233,17 +1233,14 @@ async function sendOTP() {
 const courseSchedules = {
   "Cibersegurança em Redes e Sistemas": {
     Presencial: [
-      { turma: 1, sala: "Sala 1", horario: "9h - 11h", dias: "Dias úteis" },
-      { turma: 2, sala: "Sala 1", horario: "11h - 13h", dias: "Dias úteis" },
+      { turma: 1, sala: "Sala 1", horario: "8h:30  - 10h:30", dias: "Dias úteis" },
     ],
     Online: [] // Cibersegurança não disponível online
   },
   "Design Gráfico + Motion": {
     Presencial: [
-      { turma: 3, sala: "Sala 2", horario: "8h - 10h", dias: "Dias úteis" },
-      { turma: 5, sala: "Sala 1", horario: "13h - 15h", dias: "Dias úteis" },
-      { turma: 8, sala: "Sala 2", horario: "15h - 17h", dias: "Dias úteis" },
-      { turma: 9, sala: "Sala 3", horario: "9h30 - 14h30", dias: "Sábados" },
+      { turma: 2, sala: "Sala 2", horario: "10h:40 - 12h:40", dias: "Dias úteis" },
+      { turma: 3, sala: "Sala 3", horario: "9h30 - 14h30", dias: "Sábados" },
     ],
     Online: [
       { turma: 10, sala: "Online", horario: "18h - 20h", dias: "Dias úteis" },
@@ -1251,8 +1248,7 @@ const courseSchedules = {
   },
   "Desenvolvimento Web": {
     Presencial: [
-      { turma: 4, sala: "Sala 1", horario: "15h - 17h", dias: "Dias úteis" },
-      { turma: 6, sala: "Sala 2", horario: "10h - 12h", dias: "Dias úteis" },
+      { turma: 4, sala: "Sala 1", horario: "13h - 15h", dias: "Dias úteis" },
       { turma: 11, sala: "Sala 3", horario: "9h30 - 14h30", dias: "Sábados" },
     ],
     Online: [
@@ -1261,7 +1257,7 @@ const courseSchedules = {
   },
   "Lógica de Programação": {
     Presencial: [
-      { turma: 7, sala: "Sala 2", horario: "13h - 15h", dias: "Dias úteis" }
+      { turma: 7, sala: "Sala 2", horario: "15h:15 - 17h:15", dias: "Dias úteis" }
     ],
     Online: [
       { turma: 13, sala: "Online", horario: "18h - 20h", dias: "Dias úteis" },
